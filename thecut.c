@@ -119,13 +119,9 @@ int main(int argc, char *argv[]) {
     if (wipe) {
       for (i = end; i < ks->seq.l; ++i) {
 	ks->seq.s[i] = 'N';
-	ks->qual.s[i] = 'B';
       }
     }
 
-    if (end == ks->seq.l) {
-      continue;
-    }
     putchar(ks->qual.l? '@' : '>');
     puts(ks->name.s);
     if (!trim | (end < min_len)) {
