@@ -109,9 +109,6 @@ int main(int argc, char *argv[]) {
 	    p->cnt++;
 	    if (e < end) {
 	      end=e;
-	      /* printf("%s\n", p->seq); */
-	      /* printf("%s\n", &ks->seq.s[end]); */
-	      /* printf("\n%d - %f \n", HammingDistance(p->seq, l, &ks->seq.s[ks->seq.l - i]), s); */
 	      break;
 	    }
 	  }
@@ -162,11 +159,3 @@ int main(int argc, char *argv[]) {
   free(adaps);
   return 0;
 }
-
-/* 3       14503   15625.0 0       14503 */
-/* 4       3533    3906.2  0       3533 */
-/* 5       1014    976.6   0       1014 */
-/* 6       136     244.1   0       136 */
-/* 7       84      61.0    0       84 */
-/* 8       58      15.3    0       58 */
-/* 9       66      3.8     0       58 8 */
