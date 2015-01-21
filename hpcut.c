@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <getopt.h>
 #include <zlib.h>
 #include "kseq.h"
+
+char* ILMN_ADAP_1 = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
+char* ILMN_ADAP_2 = "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT";
+
 KSEQ_INIT(gzFile, gzread)
 
 int HammingDistance(const char* a, int na, int mm, const char* b) {
@@ -47,7 +52,8 @@ int main(int argc, char *argv[]) {
 	adaps = realloc(adaps, m_adaps * sizeof(ta_adap_t));
       }
       p = &adaps[n_adaps++];
-      p->seq = (char*)strdup(optarg);
+      p->seq = malloc((strlen(optarg) + 1) * sizeof(char));
+      if (p->seq) strcpy(p->seq, optarg);
       p->type = c - '0';
     }
     else if (c == 'e') max_err = atof(optarg);
@@ -56,15 +62,17 @@ int main(int argc, char *argv[]) {
     else if (c == 't') trim = atoi(optarg);
     else if (c == 'w') wipe = atoi(optarg);
   }
-  
+
   // preset
   if (n_adaps == 0) {
     m_adaps = n_adaps = 2;
     adaps = malloc(m_adaps * sizeof(ta_adap_t));
     adaps[0].type = 3;
-    adaps[0].seq = (char*)strdup("AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC");
+    adaps[0].seq = malloc((strlen(ILMN_ADAP_1) + 1) * sizeof(char));
+    if (adaps[0].seq) strcpy(adaps[0].seq, ILMN_ADAP_1);
     adaps[1].type = 3;
-    adaps[1].seq = (char*)strdup("AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT");
+    adaps[1].seq = malloc((strlen(ILMN_ADAP_2) + 1) * sizeof(char));
+    if (adaps[1].seq) strcpy(adaps[1].seq, ILMN_ADAP_2);
   }
   // update adapter info
   for (j = 0; j < n_adaps; ++j) {
@@ -73,7 +81,7 @@ int main(int argc, char *argv[]) {
     p->cnt = 0;
   }
 
-  from_stdin = !isatty(fileno(stdin));
+  from_stdin = !isatty(STDOUT_FILENO);
   if (optind == argc && !from_stdin) {
     fprintf(stderr, "\n");
     fprintf(stderr, "Usage:   thecut [options] <in.fq>\n\n");
@@ -87,7 +95,7 @@ int main(int argc, char *argv[]) {
     return 1; // FIXME: memory leak
   }
 
-  fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "rb") : gzdopen(fileno(stdin), "rb");
+  fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "rb") : gzdopen(STDIN_FILENO, "rb");
   ks = kseq_init(fp);
 
   uint64_t counts[200] = {0};

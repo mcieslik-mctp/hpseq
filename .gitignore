@@ -28,4 +28,6 @@
 *.x86_64
 *.hex
 
-thecut
+hpcut
+hpscan_sw
+hpscan_ss
