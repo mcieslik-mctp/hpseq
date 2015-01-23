@@ -5,8 +5,8 @@
 #include <getopt.h>
 /* #include <stdint.h> */
 #include <zlib.h>
-#include "ksw.h"
-#include "kseq.h"
+#include <kseq.h>
+#include <ksw.h>
 KSEQ_INIT(gzFile, gzread)
 
 #define MAX_SEQS 100

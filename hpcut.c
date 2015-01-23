@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <getopt.h>
 #include <zlib.h>
-#include "kseq.h"
+#include <kseq.h>
 
 char* ILMN_ADAP_1 = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
 char* ILMN_ADAP_2 = "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT";

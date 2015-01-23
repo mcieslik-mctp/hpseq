@@ -31,6 +31,6 @@
 hpcut
 hpscan_sw
 hpscan_ss
-test/large*
-test/large*
+sam_skel
+test
 docs/other_code
