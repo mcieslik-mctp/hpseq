@@ -6,51 +6,35 @@
 
 
 int main(int argc, char *argv[]) {
-  int ret;
   int exit_code = 0;
-  bam_hdr_t *hdr;
+  // io names and handles
+  char *out_sam_fn;
+  out_sam_fn = malloc(strlen(argv[1])+1);
+  strcpy(out_sam_fn, argv[1]);
+  strcpy(strrchr(out_sam_fn, '.'), ".sam");
   htsFile *inp;
   htsFile *out_sam;
-  FILE *out_bed;
+  // 
+  int ret;
+  bam1_t *br;
+  bam_hdr_t *hdr;
+
   const htsFormat *fmt;
-  
+
   inp = hts_open(argv[1], "r");
   hdr = sam_hdr_read(inp);
-  fmt = hts_get_format(inp);
-  fprintf(stderr, "format: %d\n", fmt->format);
-
-  
-  // change extension of output file
-  strcpy(strrchr(argv[1], '.'), ".sam");
-  out_sam = hts_open(argv[1], "w");
+  out_sam = hts_open(out_sam_fn, "w");
   sam_hdr_write(out_sam, hdr);
 
-  // change extension of output file
-  strcpy(strrchr(argv[1], '.'), ".bed");
-  // 
-  out_bed = fopen(argv[1], "wb");
-  bam1_t *br;
   br = bam_init1();
   while ((ret = sam_read1(inp, hdr, br)) >= 0) {
-    fprintf(out_bed, "%s\t%d\t%d\t%c\n", hdr->target_name[br->core.tid], br->core.pos,
-	    bam_endpos(br), bam_is_rev(br) ? '+' : '-');
-  }
-  bam_destroy1(br);
-  fclose(out_bed);
-
-  br = bam_init1();
-  rewind(inp);
-  while ((ret = sam_read1(inp, hdr, br)) >= 0) {
+    // do something to br
     if (sam_write1(out_sam, hdr, br) < 0) {
       fprintf(stderr, "Error writing output.\n");
       exit_code = 1;
       break;
     }
   }
-  // clean-up
-  bam_destroy1(br);
-  bam_hdr_destroy(hdr);
-  
   ret = sam_close(out_sam);
   if (ret < 0) {
     fprintf(stderr, "Error closing output.\n");
@@ -61,6 +45,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Error closing input.\n");
     exit_code = 1;
   }
+  bam_destroy1(br);
+  bam_hdr_destroy(hdr);
+  free(out_sam_fn);
   
   return exit_code;
 }

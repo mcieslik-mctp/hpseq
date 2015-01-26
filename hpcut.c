@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
   ta_adap_t *adaps;
   kseq_t *ks;
   gzFile fp;
+  uint64_t counts[200] = {0};
 
   n_adaps = m_adaps = 0; adaps = 0;
   while ((c = getopt(argc, argv, "5:3:e:c:l:t:w:")) >= 0) {
@@ -92,63 +93,65 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "         -t INT     if 0 no triming is done [%d]\n", trim);
     fprintf(stderr, "         -w INT     if 0 no wiping is done [%d]\n", wipe);
     fprintf(stderr, "\n");
-    return 1; // FIXME: memory leak
+    return 1;
   }
 
-  fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "rb") : gzdopen(STDIN_FILENO, "rb");
-  ks = kseq_init(fp);
-
-  uint64_t counts[200] = {0};
-  while (kseq_read(ks) >= 0) {
-    int end=ks->seq.l;
-    int l;
-    int hd;
-    int e;
-    int mm;
-    for (j = 0; j < n_adaps; ++j) {
-      ta_adap_t *p = &adaps[j];
-      if (p->type == 3) {
-	for (i=ks->seq.l; i>=min_cut; --i) {
-	  l = i > p->len ? p->len : i;
-	  e = ks->seq.l - i;
-	  mm = (int)(l * max_err);
-	  hd = HammingDistance(p->seq, l, mm, &ks->seq.s[e]);
-	  if (hd <= mm) {
-	    p->cnt++;
-	    if (e < end) {
-	      end=e;
-	      break;
+  if (access(argv[optind], R_OK) == 0) {
+    
+    fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "rb") : gzdopen(STDIN_FILENO, "rb");
+    ks = kseq_init(fp);
+    while (kseq_read(ks) >= 0) {
+      int end=ks->seq.l;
+      int l;
+      int hd;
+      int e;
+      int mm;
+      for (j = 0; j < n_adaps; ++j) {
+	ta_adap_t *p = &adaps[j];
+	if (p->type == 3) {
+	  for (i=ks->seq.l; i>=min_cut; --i) {
+	    l = i > p->len ? p->len : i;
+	    e = ks->seq.l - i;
+	    mm = (int)(l * max_err);
+	    hd = HammingDistance(p->seq, l, mm, &ks->seq.s[e]);
+	    if (hd <= mm) {
+	      p->cnt++;
+	      if (e < end) {
+		end=e;
+		break;
+	      }
 	    }
 	  }
 	}
       }
-    }
-    counts[ks->seq.l - end]++;
-    if (wipe) {
-      for (i = end; i < ks->seq.l; ++i) {
-	ks->seq.s[i] = 'N';
+      counts[ks->seq.l - end]++;
+      if (wipe) {
+	for (i = end; i < ks->seq.l; ++i) {
+	  ks->seq.s[i] = 'N';
+	}
       }
-    }
 
-    putchar(ks->qual.l? '@' : '>');
-    puts(ks->name.s);
-    if (!trim | (end < min_len)) {
-      puts(ks->seq.s);
-    } else {
-      fwrite(ks->seq.s, 1, end, stdout); putchar('\n');
-    }
-    if (ks->qual.l) {
-      puts("+");
+      putchar(ks->qual.l? '@' : '>');
+      puts(ks->name.s);
       if (!trim | (end < min_len)) {
-  	puts(ks->qual.s);
+	puts(ks->seq.s);
       } else {
-  	fwrite(ks->qual.s, 1, end, stdout); putchar('\n');
+	fwrite(ks->seq.s, 1, end, stdout); putchar('\n');
+      }
+      if (ks->qual.l) {
+	puts("+");
+	if (!trim | (end < min_len)) {
+	  puts(ks->qual.s);
+	} else {
+	  fwrite(ks->qual.s, 1, end, stdout); putchar('\n');
+	}
       }
     }
-  }
   
-  kseq_destroy(ks);
-  gzclose(fp);
+    kseq_destroy(ks);
+    gzclose(fp);
+
+  }
   
   for (j = 0; j < n_adaps; ++j) {
     ta_adap_t *p = &adaps[j];

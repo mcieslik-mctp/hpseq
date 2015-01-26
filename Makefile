@@ -8,11 +8,14 @@ HTSLIB_PATH=htslib
 HTSLIB_LINK=-L$(HTSLIB_PATH)
 HTSLIB_INCL=-I$(HTSLIB_PATH)/htslib
 
-all:hpcut hpscan_ss hpscan_sw sam_skel
+all:hpcut hpscan_ss hpscan_sw sam_skel bed_skel
 
 
 sam_skel:sam_skel.c htslib/libhts.a
-	$(CC) $(CFLAGS) $(HTSLIB_INCL)  -o $@ sam_skel.c htslib/libhts.a -lz
+	$(CC) $(CFLAGS) $(HTSLIB_INCL) -o $@ sam_skel.c htslib/libhts.a -lz
+
+bed_skel:bed_skel.c htslib/libhts.a
+	$(CC) $(CFLAGS) $(HTSLIB_INCL) -o $@ bed_skel.c htslib/libhts.a -lz
 
 hpcut:hpcut.c $(HTSLIB_PATH)
 	$(CC) $(CFLAGS) $(HTSLIB_INCL) hpcut.c -o $@ -lz -lm
