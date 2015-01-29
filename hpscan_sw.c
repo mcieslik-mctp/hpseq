@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   seqs = malloc(MAX_SEQS * sizeof(ta_seq_t)); 
 
   int nseqs = 0;
-  while ((c = getopt(argc, argv, "1:2:s:m:n:o:e")) >= 0) {
+  while ((c = getopt(argc, argv, "1:2:s:m:n:o:e:")) >= 0) {
     if (c == 's') {
       ta_seq_t *ps;
       ps = &seqs[nseqs++];
