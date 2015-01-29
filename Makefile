@@ -13,6 +13,9 @@ HTSLIB_INCL=-I$(HTSLIB_PATH)/htslib
 
 all:hpcut hpscan_ss hpscan_sw hpscan_cw sam_skel bed_skel grep_skel
 
+clean:
+	rm -fr gmon.out *.o ext/*.o a.out  *~ *.a *.dSYM session*
+	rm hpcut hpscan_ss hpscan_sw sam_skel bed_skel grep_skel
 
 sam_skel:sam_skel.c htslib/libhts.a
 	$(CC) $(CFLAGS) $(HTSLIB_INCL) -o $@ sam_skel.c htslib/libhts.a -lz
@@ -35,20 +38,23 @@ hpscan_cw:hpscan_cw.c $(HTSLIB_PATH)
 hpscan_sw:hpscan_sw.c $(HTSLIB_PATH) $(KLIB_PATH)
 	$(CC) $(CFLAGS) $(HTSLIB_INCL) $(KLIB_INCL) $(KLIB_PATH)/ksw.c hpscan_sw.c -o $@ -lz -lm
 
+deps: htslib klib grep
+
 htslib:
-	git clone
-	cd htslib
-	$(MAKE)
+	git clone "https://github.com/samtools/htslib.git"
+	cd htslib && $(MAKE)
 
 klib:
-	cd klib
-	$(MAKE)
+	git clone "https://github.com/attractivechaos/klib.git"
 
 grep:
-	cd grep
-	./configure
-	$(MAKE)
+	wget "http://ftp.gnu.org/gnu/grep/grep-2.21.tar.xz"
+	tar xf grep-2.21.tar.xz
+	rm grep-2.21.tar.xz
+	mv grep-2.21 grep
+	cd grep && ./configure && $(MAKE)
 
-clean:
-	rm -fr gmon.out *.o ext/*.o a.out  *~ *.a *.dSYM session*
-	rm hpcut hpscan_ss hpscan_sw sam_skel bed_skel grep_skel
+clean-deps:
+	rm -rf htslib
+	rm -rf grep
+	rm -rf klib
