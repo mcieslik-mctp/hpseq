@@ -28,10 +28,18 @@
 *.x86_64
 *.hex
 
+# binaries
 hpcut
 hpscan_sw
 hpscan_ss
 sam_skel
 bed_skel
+grep_skel
+
+# directories
+grep
+htslib
+klib
+docs
+grep
 test
-docs/other_code
