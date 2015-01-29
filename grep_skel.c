@@ -8,6 +8,7 @@ int main(int argc, char *argv[]) {
   
   int exit_code = 0;
   size_t blah = 0;
+
   size_t where = 10;
   size_t res = 0;
   struct kwsmatch kwsm;

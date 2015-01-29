@@ -32,6 +32,7 @@
 hpcut
 hpscan_sw
 hpscan_ss
+hpscan_cw
 sam_skel
 bed_skel
 grep_skel
