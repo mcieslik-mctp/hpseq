@@ -33,11 +33,11 @@ int main(int argc, char *argv[]) {
   kwsprep(test);
   
   res = kwsexec(test, data, where, &kwsm);
-  printf("%d\n", where);
-  printf("%d\n", res);
-  printf("%d\n", kwsm.index);
-  printf("%d\n", kwsm.offset[0]);
-  printf("%d\n", kwsm.size[0]);
+  printf("%d\n", (int)where);
+  printf("%d\n", (int)res);
+  printf("%d\n", (int)kwsm.index);
+  printf("%d\n", (int)kwsm.offset[0]);
+  printf("%d\n", (int)kwsm.size[0]);
   
   kwsfree (test);
   return exit_code;

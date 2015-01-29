@@ -36,5 +36,5 @@ htslib-static:
 	cd htslib && $(MAKE)
 
 clean:
-	rm -fr gmon.out *.o ext/*.o a.out  *~ *.a *.dSYM session* hpcut
-	cd htslib ; make clean
+	rm -fr gmon.out *.o ext/*.o a.out  *~ *.a *.dSYM session*
+	rm hpcut hpscan_ss hpscan_sw sam_skel bed_skel grep_skel
