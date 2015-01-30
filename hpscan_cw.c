@@ -19,9 +19,10 @@ int main(int argc, char *argv[]) {
   char *line = NULL;
   size_t llen = 0;
   int nseqs = 0;
+  int invert = 0;
   kwset_t seqs = kwsalloc(NULL);
 
-  while ((c = getopt(argc, argv, "1:2:s:")) >= 0) {
+  while ((c = getopt(argc, argv, "1:2:s:v")) >= 0) {
     if (c == 's') {
       fseq = malloc((strlen(optarg) + 1));
       if (fseq) strcpy(fseq, optarg);
@@ -33,6 +34,9 @@ int main(int argc, char *argv[]) {
     if (c == '2') {
       fo[1] = malloc((strlen(optarg) + 1));
       if (fo[1]) strcpy(fo[1], optarg);
+    }
+    if (c == 'v') {
+      invert = 1;
     }
   }
 
@@ -70,21 +74,22 @@ int main(int argc, char *argv[]) {
   }
   
   if (!status) {
-    kwsprep(seqs);
     FILE *fw[2];
-    fw[0] = fopen(fo[0], "wb");
-    fw[1] = fopen(fo[1], "wb");
     gzFile  fp[2];
     kseq_t *ks[2];
-    fp[0] = gzopen(argv[optind], "rb");
-    fp[1] = gzopen(argv[optind+1], "rb");
-    ks[0] = kseq_init(fp[0]);
-    ks[1] = kseq_init(fp[1]);
-    struct kwsmatch kwsm;
     int match;
     long res;
     kseq_t *r;
     FILE *f;
+    struct kwsmatch kwsm;
+    
+    kwsprep(seqs);
+    fw[0] = fopen(fo[0], "wb");
+    fw[1] = fopen(fo[1], "wb");
+    fp[0] = gzopen(argv[optind], "rb");
+    fp[1] = gzopen(argv[optind+1], "rb");
+    ks[0] = kseq_init(fp[0]);
+    ks[1] = kseq_init(fp[1]);
     while ((kseq_read(ks[0]) >= 0) && (kseq_read(ks[1]) >= 0)) {
       match = 0;
       for (i = 0; i < 2 && !match; ++i) {
@@ -94,7 +99,7 @@ int main(int argc, char *argv[]) {
 	  break;
 	}
       }
-      if (match) {
+      if (match ^ invert) {
   	for (i = 0; i < 2; ++i) {
   	  f = fw[i];
   	  r = ks[i];
@@ -120,18 +125,13 @@ int main(int argc, char *argv[]) {
     fclose(fw[0]);
     fclose(fw[1]);
     fclose(fhseq);
-    free(line);
   }
 
   // cleanup
+  free(line);
   free(fseq);
   kwsfree(seqs);
-  if (fo[0] != NULL) {
-    free(fo[0]);
-  }
-  if (fo[1] != NULL) {
-    free(fo[1]);
-  }
-  
+  free(fo[0]);
+  free(fo[1]);
   return status;
 }
