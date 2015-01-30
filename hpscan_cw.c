@@ -119,9 +119,12 @@ int main(int argc, char *argv[]) {
     gzclose(fp[1]);
     fclose(fw[0]);
     fclose(fw[1]);
+    fclose(fhseq);
+    free(line);
   }
 
   // cleanup
+  free(fseq);
   kwsfree(seqs);
   if (fo[0] != NULL) {
     free(fo[0]);
