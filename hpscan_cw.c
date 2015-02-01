@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 	  break;
 	}
       }
-      if (match ^ invert) {
+      if (match ^ invert) { // xor
   	for (i = 0; i < 2; ++i) {
   	  f = fw[i];
   	  r = ks[i];

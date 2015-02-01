@@ -30,6 +30,7 @@
 
 # binaries
 hpcut
+hpmerge
 hpscan_sw
 hpscan_ss
 hpscan_cw

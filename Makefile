@@ -11,23 +11,17 @@ HTSLIB_PATH=htslib
 HTSLIB_LINK=-L$(HTSLIB_PATH)
 HTSLIB_INCL=-I$(HTSLIB_PATH)/htslib
 
-all:hpcut hpscan_ss hpscan_sw hpscan_cw sam_skel bed_skel grep_skel
+all:hpcut hpmerge hpscan_ss hpscan_sw hpscan_cw
 
 clean:
 	rm -fr gmon.out *.o ext/*.o a.out  *~ *.a *.dSYM session*
-	rm hpcut hpscan_ss hpscan_sw sam_skel bed_skel grep_skel
-
-sam_skel:sam_skel.c htslib/libhts.a
-	$(CC) $(CFLAGS) $(HTSLIB_INCL) -o $@ sam_skel.c htslib/libhts.a -lz
-
-bed_skel:bed_skel.c htslib/libhts.a
-	$(CC) $(CFLAGS) $(HTSLIB_INCL) -o $@ bed_skel.c htslib/libhts.a -lz
-
-grep_skel:grep_skel.c
-	$(CC) $(CFLAGS) $(GREP_INCL) $(GREP_LINK) -o grep_skel grep_skel.c grep/src/kwset.c -lgreputils
+	rm hpcut hpmerge hpscan_ss hpscan_sw
 
 hpcut:hpcut.c $(HTSLIB_PATH)
 	$(CC) $(CFLAGS) $(HTSLIB_INCL) hpcut.c -o $@ -lz -lm
+
+hpmerge:hpmerge.c $(HTSLIB_PATH)
+	$(CC) $(CFLAGS) $(HTSLIB_INCL) hpmerge.c -o $@ -lz -lm
 
 hpscan_ss:hpscan_ss.c
 	$(CC) $(CFLAGS) hpscan_ss.c -o $@ -lz -lm

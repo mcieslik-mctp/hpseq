@@ -5,6 +5,7 @@ Some fast tools for NGS data.
 ## Available tools: ##
 
 * hpcut - Simple adapter trimming based on Hamming distance.
+* hpmerge - merge two paired end FASTQ files into one single end file.
 * hpscan_cw - like grep for (pairs of) FASTQ files (GNU fgrep actually).
 * hpscan_sw - like the above but does full Smith-Waterman alignment
 
