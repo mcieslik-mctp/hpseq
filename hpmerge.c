@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   // parameters
   int p_drop = 0; // drop quality scores
   int p_min_off = 10; // minimum offset == minimum overlap - 1
-  double p_max_err = 0.12; // maximum error
+  double p_max_err = 0.125; // maximum error
 
   while ((c = getopt(argc, argv, "o:m:e:d")) >= 0) {
     if (c == 'o') {
@@ -54,11 +54,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr,
     "Usage: hpmerge [-d] [-e] [-m] -o pfx <input_1.fq> <input_2.fq>\n\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "    -o STR    output file prefix\n");
-    fprintf(stderr, "    -m INT    minimum overlap\n");
-    fprintf(stderr, "    -e FLOAT  maximum error\n");
-    fprintf(stderr, "    -d        drop quality scores\n");
-    fprintf(stderr, "\n");
+    fprintf(stderr, "    -o STR    output file prefix (required)\n");
+    fprintf(stderr, "    -m INT    minimum overlap [default: %d]\n", p_min_off + 1);
+    fprintf(stderr, "    -e FLOAT  maximum error [default: %.3f]\n", p_max_err);
+    fprintf(stderr, "    -d        drop quality scores [default: false]\n\n");
+    fprintf(stderr, "The default settings allow for 10bp overlap with no mismatches\n");
+    fprintf(stderr, "and 11bp overlap with 1 mismatch etc.\n");
     status = 1;
   } else {
     if(access(argv[optind], F_OK) == -1) {
@@ -168,7 +169,6 @@ int main(int argc, char *argv[]) {
     fclose(fw[0]);
     fclose(fw[1]);
     fclose(fw[2]);
-    
   }
   // cleanup
   free(fo[0]);
