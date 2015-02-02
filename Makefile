@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -O1 -Wno-unused-function -Wno-unused-variable -std=c99 -pedantic -pthread 
+CFLAGS=-g -Wall -Wextra -O3 -Wno-unused-function -Wno-unused-variable -std=c99 -pedantic -pthread 
 
 KLIB_PATH=klib
 KLIB_INCL=-I$(KLIB_PATH)

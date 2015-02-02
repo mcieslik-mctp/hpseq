@@ -8,39 +8,58 @@
 
 KSEQ_INIT(gzFile, gzread)
 
+int HammingDistance(const char* a, int na, int mm, const char* b) {
+  int num_mismatches = 0;
+  while ((na > 0) && (num_mismatches <= mm)) {
+    if (*a != *b)
+      ++num_mismatches;
+    --na;
+    ++a;
+    ++b;
+  }
+  return num_mismatches;
+}
 
 int main(int argc, char *argv[]) {
   // aux variables
-  int c, i, j, k;
   int status = 0;
-  char *fo = NULL;
-  int drop = 0;
-  int revc = 1;
-  
-  while ((c = getopt(argc, argv, "o:nd")) >= 0) {
-    if (c == 'o') {
-      fo = malloc((strlen(optarg) + 1));
-      if (fo) strcpy(fo, optarg);
-    }
-    if (c == 'n') {
-      revc = 0;
-    }
-    if (c == 'd') {
-      drop = 1;
-    }
-  }
+  int c, i, j, k;
+  char buf[10000];
+  // malloc'ed
+  char *fo[3] = {NULL, NULL, NULL};
 
-  if ((argv[optind] == NULL) || (argv[optind + 1] == NULL) || (fo == NULL)) {
-  	fprintf(stderr, "\n");
-  	fprintf(stderr,
-  	"Usage: hpmerge -o <output.fq> <input_1.fq> <input_2.fq>\n\n");
-  	fprintf(stderr, "Options:\n");
-  	fprintf(stderr, "    -o STR    output file name\n");
-  	fprintf(stderr, "    -o STR    output file name\n");
-  	fprintf(stderr, "    -d        drop quality scores\n");
-  	fprintf(stderr, "    -n        do not reverse complement\n");
-  	fprintf(stderr, "\n");
-  	status = 1;
+  // parameters
+  int p_drop = 0; // drop quality scores
+  int p_min_off = 10; // minimum offset == minimum overlap - 1
+  double p_max_err = 0.12; // maximum error
+
+  while ((c = getopt(argc, argv, "o:m:e:d")) >= 0) {
+    if (c == 'o') {
+      snprintf(buf, sizeof(buf), "%s%s", optarg, "_merged.fq");
+      fo[0] = malloc((strlen(buf) + 1));
+      if (fo[0]) strcpy(fo[0], buf);
+      snprintf(buf, sizeof(buf), "%s%s", optarg, "_unmerged_1.fq");
+      fo[1] = malloc((strlen(buf) + 1));
+      if (fo[1]) strcpy(fo[1], buf);
+      snprintf(buf, sizeof(buf), "%s%s", optarg, "_unmerged_2.fq");
+      fo[2] = malloc((strlen(buf) + 1));
+      if (fo[2]) strcpy(fo[2], buf);
+    }
+    else if (c == 'm') p_min_off = atoi(optarg) - 1;
+    else if (c == 'e') p_max_err = atof(optarg);
+    else if (c == 'd') p_drop = 1;
+  }
+  if ((argv[optind] == NULL) || (argv[optind + 1] == NULL) || (fo[0] == NULL)) {
+    fprintf(stderr, "\n");
+    fprintf(stderr,
+    "Usage: hpmerge [-d] [-e] [-m] -o pfx <input_1.fq> <input_2.fq>\n\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "    -o STR    output file prefix\n");
+    fprintf(stderr, "    -m INT    minimum overlap\n");
+    fprintf(stderr, "    -e FLOAT  maximum error\n");
+    fprintf(stderr, "    -d        drop quality scores\n");
+    fprintf(stderr, "\n");
+    status = 1;
   } else {
     if(access(argv[optind], F_OK) == -1) {
       printf("missing file %s\n", argv[optind]);
@@ -51,60 +70,109 @@ int main(int argc, char *argv[]) {
       status = 1;
     }
   }
-  
+
   if (!status) {
-    int last;
-    FILE *fw;
+    int mm;
+    int hd;
+    int max_over; // maximum overlap
+    int last0, last1; // index of last base
+    char *s0, *s1;  // sequence
+    char *c1, *rc1; // complement and reverse-complement
+    c1  = calloc(1000 * sizeof(char), sizeof(char));
+    rc1 = calloc(1000 * sizeof(char), sizeof(char));
+    FILE *fw[3];
     gzFile  fp[2];
     kseq_t *ks[2];
-    char *fs; // forward sequence
-    char rc[MAX_READ_LENGTH] = {0}; // reverse-complement
-    
-    fw = fopen(fo, "wb");
+    kseq_t *r;
+    FILE *f;
+    int merged;
+    // file io
+    fw[0] = fopen(fo[0], "wb");
+    fw[1] = fopen(fo[1], "wb");
+    fw[2] = fopen(fo[2], "wb");
     fp[0] = gzopen(argv[optind], "rb");
     fp[1] = gzopen(argv[optind+1], "rb");
     ks[0] = kseq_init(fp[0]);
     ks[1] = kseq_init(fp[1]);
     while ((kseq_read(ks[0]) >= 0) && (kseq_read(ks[1]) >= 0)) {
-      fputc((!drop) && ks[0]->qual.l? '@' : '>', fw);
-      fputs(ks[0]->name.s, fw);
-      fputc('\n', fw);
-      fputs(ks[0]->seq.s, fw);
-      // the second read is reverse-complemented
-      if (revc) {
-	last = ks[1]->seq.l-1;
-	fs = ks[1]->seq.s;
-	for (i=0; i<=last; ++i) {
-	  switch(fs[i]) {
-	  case 'A': rc[last - i]='T'; break;
-	  case 'T': rc[last - i]='A'; break;
-	  case 'G': rc[last - i]='C'; break;
-	  case 'C': rc[last - i]='G'; break;
-	  default:  rc[last - i]='N'; break;
-	  }
-	}
-	fputs(rc, fw);
-      } else {
-	fputs(ks[1]->seq.s, fw);
+      merged = 0;
+      //
+      last1 = ks[1]->seq.l-1;
+      s1 = ks[1]->seq.s;
+      // complement and reverse complement
+      for (i=0; i<=last1; ++i) {
+        switch(s1[i]) {
+        case 'A': c1[i] = rc1[last1 - i] = 'T'; break;
+        case 'T': c1[i] = rc1[last1 - i] = 'A'; break;
+        case 'G': c1[i] = rc1[last1 - i] = 'C'; break;
+        case 'C': c1[i] = rc1[last1 - i] = 'G'; break;
+        default:  c1[i] = rc1[last1 - i] = 'N'; break;
+        }
       }
-      fputc('\n', fw);
-      if ((!drop) && ks[0]->qual.l) {
-	fputs("+", fw);
-	fputc('\n', fw);
-	fputs(ks[0]->qual.s, fw);
-	fputs(ks[1]->qual.s, fw);
-	fputc('\n', fw);
+      s1 = rc1;
+      c1[i+1] = '\0';
+      last0 = ks[0]->seq.l-1;
+      s0 = ks[0]->seq.s;
+      //
+      int offset = (last0 < last1 ? last0 : last1);
+      for (i=offset; i>=p_min_off; --i) {
+        mm = (int)((i+1) * p_max_err);
+        hd = HammingDistance(&s0[last0 - i], i+1, mm, s1);
+        f = fw[0];
+        if (hd <= mm) {
+          // merge
+          fputc((!p_drop) && ks[0]->qual.l? '@' : '>', fw[0]);
+          fputs(ks[0]->name.s, fw[0]);
+          fputc('\n', fw[0]);
+          s0[last0 - i] = '\0';
+          fputs(s0, fw[0]);
+          fputs(&(c1[i + 1]), fw[0]);
+          fputc('\n', fw[0]);
+          if ((!p_drop) && ks[0]->qual.l) {
+            fputs("+", fw[0]);
+            fputc('\n', fw[0]);
+            ks[0]->qual.s[last0 - i] = '\0';
+            fputs(ks[0]->qual.s, fw[0]);
+            fputs(&ks[1]->qual.s[i+1], fw[0]);
+            fputc('\n', fw[0]);
+          }
+          merged = 1;
+          break;
+        }
+      }
+      if (!merged) {
+  	for (i = 1; i < 3; ++i) {
+  	  f = fw[i];
+  	  r = ks[i-1];
+  	  fputc((!p_drop) && r->qual.l? '@' : '>', f);
+  	  fputs(r->name.s, f);
+  	  fputc('\n', f);
+  	  fputs(r->seq.s, f);
+  	  fputc('\n', f);
+  	  if ((!p_drop) && r->qual.l) {
+  	    fputs("+", f);
+  	    fputc('\n', f);
+  	    fputs(r->qual.s, f);
+  	    fputc('\n', f);
+  	  }
+  	}
       }
     }
     // cleanup
+    free(c1);
+    free(rc1);
     kseq_destroy(ks[0]);
     kseq_destroy(ks[1]);
     gzclose(fp[0]);
     gzclose(fp[1]);
-    fclose(fw);
+    fclose(fw[0]);
+    fclose(fw[1]);
+    fclose(fw[2]);
+    
   }
-
-  /* // cleanup */
-  free(fo);
+  // cleanup
+  free(fo[0]);
+  free(fo[1]);
+  free(fo[2]);
   return status;
 }
