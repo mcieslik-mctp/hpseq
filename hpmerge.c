@@ -16,21 +16,20 @@ KSEQ_INIT(gzFile, gzread)
 
 inline int HammingDistance(const char* a, int na, int mm, const char* b) {
   int num_mismatches = 0;
-  while ((na > 0) && (num_mismatches <= mm)) {
-    if (*a != *b)
+  do {
+    if (*(a++) != *(b++))
       ++num_mismatches;
     --na;
-    ++a;
-    ++b;
-  }
+  } while ((num_mismatches <= mm) && (na > 0));
   return num_mismatches;
 }
 
 int main(int argc, char *argv[]) {
   // aux variables
   int status = 0;
-  int c, i;
+  int c = 0, i = 0;
   int bt = 0;
+  int verbose = 0;
   char buf[MAX_PATH_LENGTH];
   // malloc'ed
   char *fo[3] = {NULL, NULL, NULL};
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]) {
   int p_min_off_join = 14; // minimum offset == minimum overlap - 1
   double p_max_err_join = 0.12; // maximum error
 
-  while ((c = getopt(argc, argv, "o:m:e:n:f:cj")) >= 0) {
+  while ((c = getopt(argc, argv, "o:m:e:n:f:v:cj")) >= 0) {
     if (c == 'o') {
       snprintf(buf, sizeof(buf), "%s%s", optarg, "_0.fq");
       fo[0] = malloc((strlen(buf) + 1));
@@ -60,6 +59,7 @@ int main(int argc, char *argv[]) {
     else if (c == 'e') p_max_err_join = atof(optarg);
     else if (c == 'n') p_min_off_chop = atoi(optarg) - 1;
     else if (c == 'f') p_max_err_chop = atof(optarg);
+    else if (c == 'v') verbose = atoi(optarg);
     else if (c == 'j') p_join = 0;
     else if (c == 'c') p_chop = 0;
   }
@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "    -j        disable join of overlapping reads [default: %d]\n", p_join);
     fprintf(stderr, "    -c        disable chop of overlapping reads [default: %d]\n\n", p_chop);
     fprintf(stderr, "The default settings:\n");
-    fprintf(stderr, " - chop between  6- 9bp with 0 mismatches\n");
-    fprintf(stderr, " - chop between 10-13bp with 1 mismatch\n");
+    fprintf(stderr, " - chop between  6- 8bp with 0 mismatches\n");
+    fprintf(stderr, " - chop between  9-13bp with 1 mismatch\n");
     fprintf(stderr, " - join between 14-16bp with 1 mismatch\n");
     fprintf(stderr, " - join between 17-24bp with 2 mismatches\n");
     fprintf(stderr, " - join between 25-  bp with 3+ mismatches\n");
@@ -97,7 +97,6 @@ int main(int argc, char *argv[]) {
   }
   
   if (!status) {
-    /* int hd=0;         // hamming distance */
     int h[3] = {0}; // 
     int last0, last1; // index of last base
     char *s0, *s1; // sequence
@@ -122,6 +121,7 @@ int main(int argc, char *argv[]) {
     int min_off = p_min_off_chop; // guaranteed lower than p_min_off_join
     double max_err = p_max_err_chop; // guaranteed higher than p_max_err_join
     while ((kseq_read(ks[0]) >= 0) && (kseq_read(ks[1]) >= 0)) {
+      bt = 0;
       operation = PASS;
       last1 = ks[1]->seq.l-1;
       s1 = ks[1]->seq.s;
@@ -139,8 +139,9 @@ int main(int argc, char *argv[]) {
       last0 = ks[0]->seq.l-1;
       s0 = ks[0]->seq.s;
       //
-      int offset = (last0 < last1 ? last0 : last1);
-      for (i=offset; i>=min_off; --i) {
+      int i = (last0 < last1 ? last0 : last1) + 1;
+      while (i > min_off){
+        i--;
         h[0] = HammingDistance(&s0[last0 - (i - 0)], (i-0)+1, (int)((i+1) * max_err), s1);
         if (p_join && (i >= p_min_off_join) && (h[0] <= ((i+1) * p_max_err_join))) {
           max_err = p_max_err_join;
@@ -153,30 +154,39 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      /* for (i=offset; i>=min_off; i--) { */
+      /* } */
       //
       if (operation != PASS) {
         // calculate two backtracks
-        h[1] = HammingDistance(&s0[last0 - (i - 1)], (i - 1) + 1, (int)((i+1) * max_err), s1);
-        h[2] = HammingDistance(&s0[last0 - (i - 2)], (i - 2) + 1, (int)((i+1) * max_err), s1);
+        h[1] = HammingDistance(&s0[last0 - (i-1)], (i-1) + 1, (int)(((i-1)+1) * max_err), s1);
+        h[2] = HammingDistance(&s0[last0 - (i-2)], (i-2) + 1, (int)(((i-2)+1) * max_err), s1);
         // <= because we favor lower backtrack
-        /* hd = (h[0] <= h[1]) ? (h[0] <= h[2] ? h[0] : h[2]) : (h[1] <= h[2] ? h[1] : h[2]); */
         bt = (h[0] <= h[1]) ? (h[0] <= h[2] ?   0  :   2 ) : (h[1] <= h[2] ?   1 :    2 );
         i-=bt;
       }
       // 
       opcounts[operation]++;
+      if (verbose > 0) {
+        int hd=0; // hamming distance
+        if (operation != PASS) {
+          hd = (h[0] <= h[1]) ? (h[0] <= h[2] ? h[0] : h[2]) : (h[1] <= h[2] ? h[1] : h[2]);
+        } else {
+          hd = h[0];
+        }
+        printf("operation:%d ", operation);
+        printf("overlap:%d dinstance:>=%d backtrack:%d \n%s\n", i+1, hd, bt, ks[0]->seq.s);
+        for (int z=0; z < (last0-i); z++) {
+          printf(" ");
+        }
+        printf("%s\n\n", rc1);
+         verbose--;
+      }
       
-      /* printf("%s %s\noperation:%d\n", ks[0]->seq.s, ks[1]->seq.s, operation); */
-      /* printf("overlap:%d dinstance:%d backtrack:%d \n%s\n", i+1, hd, bt, ks[0]->seq.s); */
       if (operation != PASS) {
         ks[0]->seq.s[last0 - i] = '\0';
         ks[0]->qual.s[last0 - i] = '\0';
       }
-      /* for (i=0; i < (int)strlen(ks[0]->seq.s); i++) { */
-      /*   printf(" "); */
-      /* } */
-      /* printf("%s\n", rc1); */
-      /* printf("%s%s\n\n", ks[0]->seq.s, rc1); */
 
       if (operation == JOIN) {
         // reverse quality scores
