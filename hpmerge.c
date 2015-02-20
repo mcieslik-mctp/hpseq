@@ -186,6 +186,8 @@ int main(int argc, char *argv[]) {
       if (operation != PASS) {
         ks[0]->seq.s[last0 - i] = '\0';
         ks[0]->qual.s[last0 - i] = '\0';
+        rc1[ks[1]->seq.l] = '\0';
+        rq1[ks[1]->qual.l] = '\0';
       }
 
       if (operation == JOIN) {
