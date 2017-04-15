@@ -14,6 +14,14 @@ Some fast tools for NGS data.
 HPSEQ tools have build time dependencies on GNU grep, klib, and htslib.
 The dependencies can be downloaded and built if required using `make deps`.
 
+HTSlib dependencies:  
+
+```bash
+sudo apt-get install libz-dev
+sudo apt-get install libbz2-dev
+sudo apt-get install liblzma-dev
+```
+
 ```bash
 git clone "https://github.com/mcieslik-mctp/hpseq.git"
 cd hpseq
